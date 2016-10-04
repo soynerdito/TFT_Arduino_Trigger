@@ -2,6 +2,7 @@
 #include <TouchScreen.h> 
 #include <TFT.h>
 #include "TouchButton.h"
+#include <TimerOne.h>
 
 #ifdef SEEEDUINO
   #define YP A2   // must be an analog pin, use "An" notation!
@@ -35,76 +36,76 @@
 // The 2.8" TFT Touch shield has 300 ohms across the X plate
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 450);
 
-#define TRIGGER_PIN A0
+#define TRIGGER_PIN A5
+
+bool STATUS_RUNNING = false;
+unsigned long triggerDelay = 500000;
+
+char STR_CLEAR[] = "Clear";
+char STR_START[] = "Start";
+char STR_STOP[] = "Stop";
+char STR_PLUS[] = "+";
+char STR_MINUS[] = "-";
+char STR_COUNTER[] = "Counter";
 
 void printTitle()
 {
   Tft.setDisplayDirect(DOWN2UP);
-  Tft.drawString("Counter",20,300,4,WHITE);
+  Tft.drawString(STR_COUNTER,20,300,4,WHITE);
 }
 TouchButton startBtn = TouchButton(165, 210, 60, 100);
 TouchButton clearBtn = TouchButton(165, 20, 60, 100);
 TouchButton counterBtn = TouchButton(80, 60, 60, 230);
 
+//Speed controls
+TouchButton speedUpBtn = TouchButton(10, 10, 40, 40);
+TouchButton speedDownBtn = TouchButton(60, 10, 40, 40);
+
+int counter = 0;
 
 void printButtonCaption( TouchButton *btn, char* text, int color = WHITE, int textSize = 2 )
 {
   Tft.setDisplayDirect(DOWN2UP);
-  Tft.drawString(text, btn->x + 20,(btn->y + btn->height -8),2,color);
+  Tft.drawString(text, btn->x + 20,(btn->y + btn->height -8),textSize,color);
 }
 
 void drawButton(  TouchButton *btn, int color )
 {
-//  Tft.drawRectangle(165, 210, 60, 80,RED);
-    Tft.fillRectangle( btn->x, btn->y+btn->height, btn->width, btn->height, color);
+  //Tft.drawRectangle(165, 210, 60, 80,RED);
+  Tft.fillRectangle( btn->x, btn->y+btn->height, btn->width, btn->height, color);
 }
 
-void printCounter(int count)
-{
-  char charBuffer[7];
-  drawButton( &counterBtn, GREEN );
-  itoa(count,charBuffer,10);
-  printButtonCaption( &counterBtn, charBuffer, BLACK, 4 );  
-}
-
-bool STATUS_RUNNING = false;
+unsigned long tickCount=0;
 
 void setup() {
   Tft.init();  //init TFT library
-//  Tft.setDisplayDirect(LEFT2RIGHT);
-//  Tft.drawString("UP",20,20,4,WHITE);
-//  Tft.setDisplayDirect(RIGHT2LEFT);
-//  Tft.drawString("DOWN",220,220,4,WHITE);
-//  Tft.setDisplayDirect(DOWN2UP);
-//  Tft.drawString("LEFT",20,300,4,WHITE);
-//  Tft.setDisplayDirect(UP2DOWN);
-//  Tft.drawString("RIGHT",220,20,4,WHITE);
-  printTitle();  
+  //Show Title
+  printTitle();
 
   
+  //Refresh Buttons
+  refreshStartButton();
   
-/*  Tft.drawRectangle(10, 3, 200,60,BLUE);
-  Tft.fillRectangle(0, 80, 100,65,YELLOW);
-  Tft.drawRectangle(30, 160, 60, 60,RED);*/
-  
-//  Tft.drawRectangle(165, 210, 60, 80,RED);
-  drawButton( &startBtn, RED );
-  printButtonCaption( &startBtn, "Start", WHITE );
   
   drawButton( &clearBtn, BLUE );
-  printButtonCaption( &clearBtn, "Clear", WHITE );
+  printButtonCaption( &clearBtn, STR_CLEAR, WHITE );
+  // Speed controls
+  drawButton( &speedUpBtn, CYAN );
+  printButtonCaption( &speedUpBtn, STR_PLUS, BLACK, 3 );
+  drawButton( &speedDownBtn, CYAN );
+  printButtonCaption( &speedDownBtn, STR_MINUS, BLACK, 3 );
   
+  //Initialize trigger pin
+  digitalWrite(TRIGGER_PIN, HIGH);
+  pinMode(TRIGGER_PIN, OUTPUT);
+  //Causes Refresh of speed into screen
+  delayChange(0);
+  Serial.begin(9600);
 
   
-/*
-//De lado
-  Tft.drawString("Happy!",0,160,1,CYAN);
-  Tft.drawString("Happy!",0,200,2,WHITE);
-  Tft.drawString("Happy!",0,240,4,WHITE);
-  */
-    Serial.begin(9600);
 }
 
+int lastTriggerCount =0;
 void loop() {
   // put your main code here, to run repeatedly:
     // a point object holds x y and z coordinates
@@ -128,36 +129,96 @@ void loop() {
       onClickStart();  
     }else if( clearBtn.isClicked(p.x,p.y) ) {
       onClickClear();  
+    }else if( speedUpBtn.isClicked(p.x,p.y) ) {
+      delayChange(5000);
+    }else if( speedDownBtn.isClicked(p.x,p.y) ) {
+      delayChange(-5000);
     }else{      
-      STATUS_RUNNING = !STATUS_RUNNING;
+      refreshCounterDisplay();      
     }
   }
   /* Serial.print("X = "); Serial.print(p.x);
      Serial.print("\tY = "); Serial.print(p.y);
      Serial.print("\tPressure = "); Serial.println(p.z);
   */
-
-  delay(20);
-  if( STATUS_RUNNING )
+  /*delay(triggerDelay);*/  
+  //delay(1000);
+  if( STATUS_RUNNING && lastTriggerCount != counter && (millis() - tickCount) > 1000 )
   {
-    doTrigger();    
+    refreshCounterDisplay();
+    lastTriggerCount = counter;
+    tickCount = millis();
   }
 }
 
-int counter = 0;
-void doTrigger()
+
+void delayChange(unsigned long speedChange)
 {
-  counter ++;
-  printCounter(counter);
+  triggerDelay += speedChange;
+  //Do not allow it to go bellow 0
+  triggerDelay = triggerDelay<5000?50000:triggerDelay;
+  //Set Timmer
+  
+  //Timer1.stop();
+  //Timer1.initialize(triggerDelay);
+  Timer1.setPeriod(triggerDelay);
+  //Timer1.attachInterrupt( doTrigger ); // attach the service routine here  
+  //Timer1.start();
+  char speedBuffer[10];
+  ltoa(triggerDelay, speedBuffer, 10 );
+  // Draw speed counter display
+  Tft.fillRectangle( 141, 100, 20, 90, BLACK);
+  Tft.drawRectangle( 141, 10, 20, 90, YELLOW);
+  Tft.drawString(speedBuffer,150,70,1,YELLOW);
+}
+
+void refreshStartButton()
+{
+  drawButton( &startBtn, (STATUS_RUNNING?RED:GREEN) );
+  printButtonCaption( &startBtn, (STATUS_RUNNING?STR_STOP:STR_START), WHITE );
 }
 void onClickStart()
 {
-   STATUS_RUNNING = true;
+  STATUS_RUNNING = !STATUS_RUNNING;
+  Serial.println("Clicked Start");
+  if( STATUS_RUNNING ){    
+    Timer1.initialize(triggerDelay);
+    Timer1.attachInterrupt( doTrigger );    
+  }else{
+    Timer1.stop();
+  }
+  refreshStartButton();
+  //Timer1.initialize(180000); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
+  delayChange(0);
+  refreshCounterDisplay();
 }
 
 void onClickClear()
 {
   STATUS_RUNNING = false;  
   counter = 0;
-  printCounter(counter);
+  refreshCounterDisplay();
 }
+
+int triggering = 0;
+void doTrigger(){
+  if(!STATUS_RUNNING || triggering>0 ){ 
+    Serial.println("SKIP TRIGGER");
+    return; }
+  triggering = 1;
+  Serial.println("Trigger");
+  //digitalWrite( TRIGGER_PIN, digitalRead( TRIGGER_PIN ) ^ 1 );  
+  digitalWrite( TRIGGER_PIN, LOW );  
+  delay(300);
+  digitalWrite( TRIGGER_PIN, HIGH );
+  counter++;
+  triggering = 0;
+}
+void refreshCounterDisplay()
+{  
+  char charBuffer[10];
+  drawButton( &counterBtn, GREEN );
+  ltoa(counter,charBuffer,10);
+  printButtonCaption( &counterBtn, charBuffer, BLACK, 4 );    
+}
+
