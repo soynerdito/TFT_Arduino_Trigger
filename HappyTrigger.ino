@@ -140,9 +140,9 @@ void loop() {
     }else if( clearBtn.isClicked(p.x,p.y) ) {
       onClickClear();  
     }else if( speedUpBtn.isClicked(p.x,p.y) ) {      
-      delayChange(-15);
+      delayChange(-10);
     }else if( speedDownBtn.isClicked(p.x,p.y) ) {      
-      delayChange(15);
+      delayChange(10);
     }else{      
       refreshCounterDisplay();      
     }
