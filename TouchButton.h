@@ -19,6 +19,6 @@ TouchButton::TouchButton(int x, int y, int width, int height)
 
 bool TouchButton::isClicked(int x, int y)
 {
-  return (x >= this->x && x <= (x+width) && y >= this->y && y <= (y+height) );
+  return (x > (this->x+1) && y > this-> y ) && ( x < this->x+this->width ) && y < (this-> y+this->height-2) ;
 }
 
