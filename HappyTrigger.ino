@@ -63,15 +63,6 @@ TouchButton speedUpBtn = TouchButton(&Tft, 10, 10, 40, 40, CYAN, BLACK,STR_PLUS,
 TouchButton speedDownBtn = TouchButton(&Tft, 60, 10, 40, 40, CYAN, BLACK,STR_MINUS, 3 );
 
 int counter = 0;
-
-/*void printButtonCaption( TouchButton *btn, char* text, int color = WHITE, int textSize = 2 )
-{
-  Tft.setDisplayDirect(DOWN2UP);
-  Tft.drawString(text, btn->x + 20,(btn->y + btn->height -8),textSize,color);
-}*/
-
-
-
 unsigned long tickCount=0;
 
 void setup() {
