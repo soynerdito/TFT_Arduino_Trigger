@@ -34,13 +34,17 @@
 
 // For better pressure precision, we need to know the resistance
 // between X+ and X- Use any multimeter to read it
-// The 2.8" TFT Touch shield has 300 ohms across the X plate
+// The 2.8" TFT Touch shield has 3t00 ohms across the X plate
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 450);
 
 #define TRIGGER_PIN 19
 
 bool STATUS_RUNNING = false;
 unsigned long triggerDelay = 500;
+
+#define DEFAULT_BORDER_COLOR BLACK //0x5c50
+#define DEFAULT_BORDER_WIDTH 2
+#define COLOR_GREEN_BUTTON 0x5627
 
 char STR_CLEAR[] = "Clear";
 char STR_START[] = "Start";
@@ -54,19 +58,38 @@ void printTitle()
   Tft.setDisplayDirect(DOWN2UP);  
   Tft.drawString(STR_COUNTER,20,300,4,WHITE);
 }
-TouchButton startBtn = TouchButton(&Tft, 165, 210, 60, 100, GREEN);
-TouchButton clearBtn = TouchButton(&Tft, 165, 20, 60, 100, BLUE, WHITE, STR_CLEAR, 2 );
-TouchButton counterBtn = TouchButton(&Tft, 80, 60, 60, 230, GREEN, BLACK, NULL, 4 );
+TouchButton startBtn = TouchButton(&Tft, 165, 210, 60, 100, COLOR_GREEN_BUTTON );//GREEN);
+TouchButton clearBtn = TouchButton(&Tft, 165, 20, 60, 100, 0x0BDE, WHITE, STR_CLEAR, 2 );
+TouchButton counterBtn = TouchButton(&Tft, 80, 60, 60, 230,  0xFFF5, 0x2128, NULL, 4 );
 
 //Speed controls
-TouchButton speedUpBtn = TouchButton(&Tft, 10, 10, 40, 40, CYAN, BLACK,STR_PLUS, 3 );
-TouchButton speedDownBtn = TouchButton(&Tft, 60, 10, 40, 40, CYAN, BLACK,STR_MINUS, 3 );
+TouchButton speedUpBtn = TouchButton(&Tft, 10, 10, 40, 40, 0x759F, BLACK,STR_PLUS, 3 );
+TouchButton speedDownBtn = TouchButton(&Tft, 60, 10, 40, 40, 0x759F, BLACK,STR_MINUS, 3 );
 
 int counter = 0;
 unsigned long tickCount=0;
 
+void drawScreenBorder(int width, int color )
+{
+  for( int i=0; i<=width; i++)
+  {
+    Tft.drawRectangle(0+i, 0+i, 240-i-i,320-i-i, color );
+  }
+
+}
+
 void setup() {
   Tft.init();  //init TFT library
+  //ts.begin();
+  //Tft.fill(39,36,75);
+  //329497
+  //paintScreen(&Tft, 0x329 );
+  //paintScreen(&Tft, GREEN );
+  //Tft.drawRectangle(0, 0, 320,240,GREEN);   
+  drawScreenBorder(DEFAULT_BORDER_WIDTH, DEFAULT_BORDER_COLOR );
+  /*Tft.drawRectangle(0, 0, 239,319, 0x329 );
+  Tft.drawRectangle(0, 0, 238,318, 0x329 );
+  Tft.drawRectangle(0, 0, 237,317, 0x329 );*/
   //Show Title
   printTitle();
     
@@ -192,9 +215,10 @@ void delayChange(int speedChange)
 
 void refreshStartButton()
 {
-  startBtn.setColor((STATUS_RUNNING?RED:GREEN));
+  startBtn.setColor((STATUS_RUNNING?RED:COLOR_GREEN_BUTTON));
   startBtn.setCaption( (STATUS_RUNNING?STR_STOP:STR_START) );
-  startBtn.draw();
+  startBtn.draw();    
+  drawScreenBorder(DEFAULT_BORDER_WIDTH, (STATUS_RUNNING?RED:DEFAULT_BORDER_COLOR) );
 }
 
 void onClickStart()
