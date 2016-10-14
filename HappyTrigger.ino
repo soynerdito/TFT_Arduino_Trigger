@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <TouchScreen.h> 
-#include <TFT.h>
+
+#include <TFT.h>  
+
 #include "TouchButton.h"
 
 #ifdef SEEEDUINO
@@ -49,30 +51,26 @@ char STR_COUNTER[] = "Counter";
 
 void printTitle()
 {
-  Tft.setDisplayDirect(DOWN2UP);
+  Tft.setDisplayDirect(DOWN2UP);  
   Tft.drawString(STR_COUNTER,20,300,4,WHITE);
 }
-TouchButton startBtn = TouchButton(165, 210, 60, 100);
-TouchButton clearBtn = TouchButton(165, 20, 60, 100);
-TouchButton counterBtn = TouchButton(80, 60, 60, 230);
+TouchButton startBtn = TouchButton(&Tft, 165, 210, 60, 100, GREEN);
+TouchButton clearBtn = TouchButton(&Tft, 165, 20, 60, 100, BLUE, WHITE, STR_CLEAR, 2 );
+TouchButton counterBtn = TouchButton(&Tft, 80, 60, 60, 230, GREEN, BLACK, NULL, 4 );
 
 //Speed controls
-TouchButton speedUpBtn = TouchButton(10, 10, 40, 40);
-TouchButton speedDownBtn = TouchButton(60, 10, 40, 40);
+TouchButton speedUpBtn = TouchButton(&Tft, 10, 10, 40, 40, CYAN, BLACK,STR_PLUS, 3 );
+TouchButton speedDownBtn = TouchButton(&Tft, 60, 10, 40, 40, CYAN, BLACK,STR_MINUS, 3 );
 
 int counter = 0;
 
-void printButtonCaption( TouchButton *btn, char* text, int color = WHITE, int textSize = 2 )
+/*void printButtonCaption( TouchButton *btn, char* text, int color = WHITE, int textSize = 2 )
 {
   Tft.setDisplayDirect(DOWN2UP);
   Tft.drawString(text, btn->x + 20,(btn->y + btn->height -8),textSize,color);
-}
+}*/
 
-void drawButton(  TouchButton *btn, int color )
-{
-  //Tft.drawRectangle(165, 210, 60, 80,RED);
-  Tft.fillRectangle( btn->x, btn->y+btn->height, btn->width, btn->height, color);
-}
+
 
 unsigned long tickCount=0;
 
@@ -80,19 +78,15 @@ void setup() {
   Tft.init();  //init TFT library
   //Show Title
   printTitle();
-
-  
-  //Refresh Buttons
+    
+  //Draw buttons for first time
   refreshStartButton();
-  
-  
-  drawButton( &clearBtn, BLUE );
-  printButtonCaption( &clearBtn, STR_CLEAR, WHITE );
-  // Speed controls
-  drawButton( &speedUpBtn, CYAN );
-  printButtonCaption( &speedUpBtn, STR_PLUS, BLACK, 3 );
-  drawButton( &speedDownBtn, CYAN );
-  printButtonCaption( &speedDownBtn, STR_MINUS, BLACK, 3 );
+  clearBtn.draw( );
+  // Speed controls  
+  speedUpBtn.setTextMargin(10,8);
+  speedDownBtn.setTextMargin(10,8);
+  speedUpBtn.draw();
+  speedDownBtn.draw();
   
   //Initialize trigger pin
   digitalWrite(TRIGGER_PIN, HIGH);
@@ -192,8 +186,6 @@ void delayChange(int speedChange)
     triggerDelay += speedChange;   
   }
   
-  
-  
   Serial.println(triggerDelay); 
   //Set Timmer  
   //Timer1.setPeriod(triggerDelay);
@@ -209,9 +201,11 @@ void delayChange(int speedChange)
 
 void refreshStartButton()
 {
-  drawButton( &startBtn, (STATUS_RUNNING?RED:GREEN) );
-  printButtonCaption( &startBtn, (STATUS_RUNNING?STR_STOP:STR_START), WHITE );
+  startBtn.setColor((STATUS_RUNNING?RED:GREEN));
+  startBtn.setCaption( (STATUS_RUNNING?STR_STOP:STR_START) );
+  startBtn.draw();
 }
+
 void onClickStart()
 {
   STATUS_RUNNING = !STATUS_RUNNING;
@@ -241,11 +235,12 @@ void doTrigger(){
   digitalWrite( TRIGGER_PIN, HIGH );
   counter++;
 }
+
 void refreshCounterDisplay()
 {  
   char charBuffer[10];
-  drawButton( &counterBtn, GREEN );
   ltoa(counter,charBuffer,10);
-  printButtonCaption( &counterBtn, charBuffer, BLACK, 4 );    
+  counterBtn.setCaption( charBuffer );
+  counterBtn.draw();
 }
 
